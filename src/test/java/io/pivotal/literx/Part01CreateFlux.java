@@ -1,5 +1,10 @@
 package io.pivotal.literx;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
+import java.util.Arrays;
+
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.test.TestSubscriber;
@@ -18,16 +23,15 @@ public class Part01CreateFlux {
 	@Test
 	public void empty() {
 		Flux<String> flux = emptyFlux();
-		TestSubscriber<String> testSubscriber = new TestSubscriber<>();
+		TestSubscriber<String> testSubscriber = new TestSubscriber<String>();
 		testSubscriber
 				.bindTo(flux)
 				.assertValueCount(0)
 				.assertComplete();
 	}
 
-	// TODO Return an empty Flux
 	Flux<String> emptyFlux() {
-		return null;
+		return Flux.empty();
 	}
 
 //========================================================================================
@@ -42,9 +46,8 @@ public class Part01CreateFlux {
 				.assertComplete();
 	}
 
-	// TODO Return a Flux that contains 2 values "foo" and "bar" without using an array or a collection
 	Flux<String> fooBarFluxFromValues() {
-		return null;
+		return Flux.just("foo","bar");
 	}
 
 //========================================================================================
@@ -59,9 +62,8 @@ public class Part01CreateFlux {
 				.assertComplete();
 	}
 
-	// TODO Create a Flux from a List that contains 2 values "foo" and "bar"
 	Flux<String> fooBarFluxFromList() {
-		return null;
+		return Flux.fromIterable(Arrays.asList(new String[]{"foo","bar"}));
 	}
 
 //========================================================================================
@@ -76,9 +78,8 @@ public class Part01CreateFlux {
 				.assertNotComplete();
 	}
 
-	// TODO Create a Flux that emits an IllegalStateException
 	Flux<String> errorFlux() {
-		return null;
+		return Flux.error(new IllegalStateException());
 	}
 
 //========================================================================================
@@ -92,9 +93,8 @@ public class Part01CreateFlux {
 				.assertNotTerminated();
 	}
 
-	// TODO Create a Flux that never terminates
 	Flux<String> neverTerminatedFlux() {
-		return null;
+		return Flux.never();
 	}
 
 //========================================================================================
@@ -109,9 +109,8 @@ public class Part01CreateFlux {
 				.awaitAndAssertNextValues(0L, 1L, 2L);
 	}
 
-	// TODO Create a Flux that emits an increasing value each 100ms
 	Flux<Long> counter() {
-		return null;
+		return Flux.interval(Duration.of(100, ChronoUnit.MILLIS));
 	}
 
 }

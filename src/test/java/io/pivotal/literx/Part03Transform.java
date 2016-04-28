@@ -3,6 +3,9 @@ package io.pivotal.literx;
 import io.pivotal.literx.domain.User;
 import io.pivotal.literx.repository.ReactiveRepository;
 import io.pivotal.literx.repository.ReactiveUserRepository;
+
+import java.util.function.Function;
+
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -32,7 +35,13 @@ public class Part03Transform {
 
 	// TODO Capitalize the user username, firstname and lastname
 	Mono<User> capitalizeOne(Mono<User> mono) {
-		return null;
+		return mono.then( new Function<T, Mono<? extends R>>() {
+
+			@Override
+			public Mono<? extends R> apply(T t) {
+				return Mo
+			}
+		}  );
 	}
 
 //========================================================================================
