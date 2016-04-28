@@ -2,10 +2,10 @@ package io.pivotal.literx;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.Arrays;
 
 import org.junit.Test;
+
 import reactor.core.publisher.Flux;
 import reactor.core.test.TestSubscriber;
 

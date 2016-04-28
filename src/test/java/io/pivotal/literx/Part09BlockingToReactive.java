@@ -46,9 +46,11 @@ public class Part09BlockingToReactive {
 				.assertComplete();
 	}
 
-	// TODO Create a Flux for reading all users from the blocking repository, and run it with a scheduler suitable for slow tasks
+	// Create a Flux for reading all users from the blocking repository, and run it with a scheduler suitable for slow tasks
 	Flux<User> blockingRepositoryToFlux(BlockingRepository<User> repository) {
-		return null;
+		return Flux
+				.fromIterable(repository.findAll())
+				.subscribeOn(Computations.concurrent()); // TO BE REMOVED
 	}
 
 //========================================================================================
@@ -72,9 +74,12 @@ public class Part09BlockingToReactive {
 		assertFalse(it.hasNext());
 	}
 
-	// TODO Insert users contained in the Flux parameter in the blocking repository using an scheduler factory suitable for fast tasks
+	// Insert users contained in the Flux parameter in the blocking repository using an scheduler factory suitable for fast tasks
 	Mono<Void> fluxToBlockingRepository(Flux<User> flux, BlockingRepository<User> repository) {
-		return null;
+		return flux
+				.publishOn(Computations.parallel())
+				.doOnNext(user -> repository.save(user))
+				.after();
 	}
 
 //========================================================================================
@@ -95,9 +100,9 @@ public class Part09BlockingToReactive {
 				.assertComplete();
 	}
 
-	// TODO Return a valid Mono of user for null input and non null input user (hint: Reactive Streams does not accept null values)
+	// Return a valid Mono of user for null input and non null input user (hint: Reactive Streams does not accept null values)
 	Mono<User> nullAwareUserToMono(User user) {
-		return null;
+		return Mono.justOrEmpty(user);
 	}
 
 }

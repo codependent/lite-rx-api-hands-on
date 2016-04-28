@@ -34,9 +34,8 @@ public class Part04Merge {
 				.assertComplete();
 	}
 
-	// TODO Merge flux1 and flux2 values with interleave
 	Flux<User> mergeFluxWithInterleave(Flux<User> flux1, Flux<User> flux2) {
-		return null;
+		return flux1.mergeWith(flux2);
 	}
 
 //========================================================================================
@@ -52,9 +51,8 @@ public class Part04Merge {
 				.assertComplete();
 	}
 
-	// TODO Merge flux1 and flux2 values with no interleave (flux1 values, and then flux2 values)
 	Flux<User> mergeFluxWithNoInterleave(Flux<User> flux1, Flux<User> flux2) {
-		return null;
+		return Flux.concat(flux1, flux2);
 	}
 
 //========================================================================================
@@ -72,9 +70,8 @@ public class Part04Merge {
 				.assertComplete();
 	}
 
-	// TODO Create a Flux containing the values of the 2 Mono
 	Flux<User> createFluxFromMultipleMono(Mono<User> mono1, Mono<User> mono2) {
-		return null;
+		return Flux.concat(mono1, mono2);
 	}
 
 }
