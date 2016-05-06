@@ -13,8 +13,10 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import reactor.core.publisher.Computations;
+import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxProcessor;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.subscriber.SignalEmitter;
 import reactor.core.subscriber.SignalEmitter.Emission;
@@ -236,11 +238,64 @@ public class Part10SubscribeOnPublishOn {
         Scheduler concurrent = Computations.concurrent();
 
         EmitterProcessor<Float> timeGenerator = EmitterProcessor.create();
-
         timeGenerator
-                .subscribeOn(concurrent)
-                .publishOn(concurrent)
-                .subscribe(v -> System.out.println("0: " + v));
+        	.subscribeOn(concurrent)
+        	.publishOn(concurrent);
+
+        SignalEmitter<Float> emitter = timeGenerator.connectEmitter();
+
+        Computations.single().schedule(() -> {
+        	SecureRandom sr = new SecureRandom();
+            while (true) {
+                try {
+                    Thread.sleep(1000);
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
+                float random = sr.nextFloat();
+                System.out.println("NEW VALUE ---------------"+random);
+                emitter.emit(random);
+            }
+        });
+        
+        FluxProcessor<Float,Float> droppingProcessor = FluxProcessor.<Float,Float>wrap(timeGenerator, timeGenerator.onBackpressureDrop());
+
+        Thread.sleep(4000);
+
+        System.out.println("WAKE UP");
+
+        RnApp aaa = new RnApp("AAA");
+        RnApp zzz = new RnApp("ZZZ");
+        droppingProcessor.subscribe(aaa);
+        droppingProcessor.subscribe(zzz);
+
+        Thread.sleep(4000);
+
+        System.out.println("REQUESTING 5");
+        aaa.request(5);
+        zzz.request(5);
+        
+        Thread.sleep(4000);
+
+        System.out.println("ONE MORE SUBSCRIBER");
+
+        timeGenerator.subscribe(v -> System.out.println("3: " + v));
+
+        Thread.sleep(2000);
+     }
+	 
+	 @Test
+     public void testPublishSubscribe2() throws InterruptedException {
+	 	
+        Scheduler concurrent = Computations.concurrent();
+
+        DirectProcessor<Float> timeGenerator = DirectProcessor.<Float>create();
+        
+        timeGenerator
+        .subscribeOn(concurrent)
+        .publishOn(concurrent)
+        .subscribe(v -> System.out.println("0: " + v));
 
         SignalEmitter<Float> emitter = timeGenerator.connectEmitter();
 
