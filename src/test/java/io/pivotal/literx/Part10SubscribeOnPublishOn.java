@@ -1,8 +1,11 @@
 package io.pivotal.literx;
 
+import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.Test;
@@ -10,13 +13,14 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import reactor.core.publisher.Computations;
+import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Scheduler;
+import reactor.core.subscriber.SignalEmitter;
+import reactor.core.subscriber.SignalEmitter.Emission;
 
 public class Part10SubscribeOnPublishOn {
 
-	private CountDownLatch latch = new CountDownLatch(2);
-	
 	public class Coach implements Subscriber<Duration>{
 
 		private String name;
@@ -57,7 +61,8 @@ public class Part10SubscribeOnPublishOn {
 	}
 	
 	@Test
-	public void sensorReading() throws InterruptedException {
+	public void stopwatchReading() throws InterruptedException {
+		CountDownLatch latch = new CountDownLatch(2);
 		
 		Flux<Duration> stopWatch = Flux.<Duration>create( (c) -> {
 			Clock clock = Clock.systemDefaultZone();
@@ -82,4 +87,201 @@ public class Part10SubscribeOnPublishOn {
 		latch.await();
 	}
 	
+	public class RnApp implements Subscriber<Float>{
+		
+		private String name;
+		private Subscription subscription;
+		private List<Float> randomNumbers = new ArrayList<Float>();
+		
+		public RnApp(String name){
+			this.name = name;
+		}
+		
+		@Override
+		public void onComplete() {
+			System.out.println("onComplete");
+		}
+
+		@Override
+		public void onError(Throwable err) {
+			err.printStackTrace();
+		}
+
+		@Override
+		public void onNext(Float f) {
+			System.out.println(Thread.currentThread().getName()+"-"+name+ " got ------> "+f);
+			System.out.println(Thread.currentThread().getName()+"-"+name+ " got ------> "+this.randomNumbers);
+			this.randomNumbers.add(f);
+		}
+
+		@Override
+		public void onSubscribe(Subscription subs) {
+			this.subscription = subs;
+		}
+		
+		public void request(long n){
+			this.subscription.request(n);
+		}
+	}
+	
+	@Test
+	public void randomNumberReading() throws InterruptedException {
+		
+		CountDownLatch latch = new CountDownLatch(1);
+		Scheduler concurrent = Computations.concurrent();
+		/*
+		Flux<Float> coldRandomNumberGenerator = Flux.<Float, SecureRandom>using(
+		    () -> new SecureRandom(),
+		    sr -> Flux
+		    	.interval(Duration.of(1000, ChronoUnit.MILLIS))
+		    	.<Float>map(v -> sr.nextFloat()),
+	    	sr -> { }
+		).log().onBackpressureDrop().subscribeOn(Computations.concurrent());
+		
+		ConnectableFlux<Float> randomNumberGenerator = coldRandomNumberGenerator.subscribeOn(Computations.concurrent()).publish(1);
+		randomNumberGenerator.connect();
+			*/
+		/*
+		ConnectableFlux<Float> randomNumberGenerator = ConnectableFlux.<Float>create( (c) -> {
+			SecureRandom sr = new SecureRandom();
+			int i = 1;
+			while(true){
+				try {
+					Thread.sleep(1);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				System.out.println("-----------------------------------------------------"+(i++));
+				c.onNext(sr.nextFloat());
+			}
+		}).log().publish();
+		randomNumberGenerator.connect();
+		
+		
+		Flux<Float> noCacheRandomNumberGenerator = randomNumberGenerator
+														.log()
+														.subscribeOn(Computations.concurrent())
+														.onBackpressureDrop();
+														*/
+		
+		/*
+		Flux<Float> randomNumberGenerator = Flux.<Float>yield( consumer -> {
+			SecureRandom sr = new SecureRandom();
+			int i = 1;
+			while(true){
+				try {
+					Thread.sleep(1000);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				Emission emission = consumer.emit(sr.nextFloat());
+			}
+		});
+		randomNumberGenerator.log().subscribeOn(Computations.concurrent()).subscribe();
+		*/
+		
+		Generator generator = new Generator();
+		generator.start();
+		Thread.sleep(6000);
+		System.out.println("WAKE UP");
+		RnApp app = new RnApp("APP");
+		RnApp xxx = new RnApp("XXX");
+		generator.getRandomNumberGenerator().subscribe(app);
+		generator.getRandomNumberGenerator().subscribe(xxx);
+		Thread.sleep(6000);
+		System.out.println("WAKE UP 2"); 
+		app.request(5);
+		xxx.request(5);
+		
+		Thread.sleep(30000);
+		System.out.println("WAKE UP 3");
+		app.request(5);
+		xxx.request(5);
+	
+		latch.await();
+	}
+
+	public class Generator{
+		
+		private EmitterProcessor<Float> randomNumberGenerator;
+		private Scheduler concurrent = Computations.concurrent();
+		
+		public void start(){
+			randomNumberGenerator = EmitterProcessor.create();
+			randomNumberGenerator.log().subscribeOn(concurrent).publishOn(concurrent).onBackpressureDrop().subscribe();    
+
+			Computations.single().schedule( () -> {
+				SignalEmitter<Float> emitter = randomNumberGenerator.connectEmitter();
+				SecureRandom sr = new SecureRandom();
+				int i = 1;
+				while(true){
+				     try {
+				             Thread.sleep(1000);
+				     } catch (Exception e) {
+				             e.printStackTrace();
+				     }
+				     Emission emission = emitter.emit(sr.nextFloat());
+				}
+			});
+		}
+		
+		public EmitterProcessor<Float> getRandomNumberGenerator() {
+			return randomNumberGenerator;
+		}
+	}
+	
+	 @Test
+     public void testPublishSubscribe() throws InterruptedException {
+	 	
+        Scheduler concurrent = Computations.concurrent();
+
+        EmitterProcessor<Float> timeGenerator = EmitterProcessor.create();
+
+        timeGenerator
+                .subscribeOn(concurrent)
+                .publishOn(concurrent)
+                .subscribe(v -> System.out.println("0: " + v));
+
+        SignalEmitter<Float> emitter = timeGenerator.connectEmitter();
+
+        Computations.single().schedule(() -> {
+        	SecureRandom sr = new SecureRandom();
+            while (true) {
+                try {
+                    Thread.sleep(1000);
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
+                float random = sr.nextFloat();
+                System.out.println("NEW VALUE ---------------"+random);
+                emitter.emit(random);
+            }
+
+        });
+
+        Thread.sleep(4000);
+
+        System.out.println("WAKE UP");
+
+        RnApp aaa = new RnApp("AAA");
+        RnApp zzz = new RnApp("ZZZ");
+        timeGenerator.subscribe(aaa);
+        timeGenerator.subscribe(zzz);
+
+        Thread.sleep(4000);
+
+        System.out.println("REQUESTING 5");
+        aaa.request(5);
+        zzz.request(5);
+        
+        Thread.sleep(4000);
+
+        System.out.println("ONE MORE SUBSCRIBER");
+
+        timeGenerator.subscribe(v -> System.out.println("3: " + v));
+
+        Thread.sleep(2000);
+     }
+	 
 }
