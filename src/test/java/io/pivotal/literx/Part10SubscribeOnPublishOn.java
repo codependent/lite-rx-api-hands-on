@@ -290,12 +290,10 @@ public class Part10SubscribeOnPublishOn {
 	 	
         Scheduler concurrent = Computations.concurrent();
 
-        DirectProcessor<Float> timeGenerator = DirectProcessor.<Float>create();
-        
+        DirectProcessor<Float> timeGenerator = DirectProcessor.create();
         timeGenerator
-        .subscribeOn(concurrent)
-        .publishOn(concurrent)
-        .subscribe(v -> System.out.println("0: " + v));
+        	.subscribeOn(concurrent)
+        	.publishOn(concurrent);
 
         SignalEmitter<Float> emitter = timeGenerator.connectEmitter();
 
@@ -312,8 +310,9 @@ public class Part10SubscribeOnPublishOn {
                 System.out.println("NEW VALUE ---------------"+random);
                 emitter.emit(random);
             }
-
         });
+        
+        FluxProcessor<Float,Float> droppingProcessor = FluxProcessor.<Float,Float>wrap(timeGenerator, timeGenerator.onBackpressureDrop());
 
         Thread.sleep(4000);
 
@@ -321,8 +320,8 @@ public class Part10SubscribeOnPublishOn {
 
         RnApp aaa = new RnApp("AAA");
         RnApp zzz = new RnApp("ZZZ");
-        timeGenerator.subscribe(aaa);
-        timeGenerator.subscribe(zzz);
+        droppingProcessor.subscribe(aaa);
+        droppingProcessor.subscribe(zzz);
 
         Thread.sleep(4000);
 
